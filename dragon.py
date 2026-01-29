@@ -1,99 +1,130 @@
 import os
+import sys
 import time
-import argparse
+import json
 import google.generativeai as genai
 from rich.console import Console
 from rich.panel import Panel
+from rich.table import Table
+from rich.live import Live
+from rich.text import Text
+from rich.markdown import Markdown
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-# إعداد الواجهة
+# إعدادات النظام
 console = Console()
 
-# إعداد المفتاح - تأكد من تحديثه إذا قمت بتغييره
-genai.configure(api_key="AIzaSyC3Nyp_aH0DfQAoYqCdbvA5mhBVlTt1wNs")
+# إعداد مفتاح الـ API (يفضل وضعه في متغير بيئة)
+API_KEY = "AIzaSyB-ulLc4L383-d6DvYD0U-hV4aKHhuo2Wo"
+genai.configure(api_key=API_KEY)
 
-def banner():
-    os.system('clear')
-    banner_text = """
-    ██████  ██████   █████   ██████   ██████  ███    ██ 
-    ██   ██ ██   ██ ██   ██ ██       ██    ██ ████   ██ 
-    ██   ██ ██████  ███████ ██   ███ ██    ██ ██ ██  ██ 
-    ██   ██ ██   ██ ██   ██ ██    ██ ██    ██ ██  ██ ██ 
-    ██████  ██   ██ ██   ██  ██████   ██████  ██   ████ 
-    """
-    console.print(f"[bold red]{banner_text}[/bold red]")
-    console.print(Panel("[bold cyan]COMMANDER: toolss0824828402 | SYSTEM: DRAGON AI[/bold cyan]", expand=False))
+class DragonAI:
+    def __init__(self):
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        self.history = []
+        self.output_dir = "dragon_outputs"
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
 
-def get_ai_response(prompt, persona="expert"):
-    configs = {
-        "expert": "Professional technical expert. Deep English analysis.",
-        "simple": "Explain like I'm five (ELI5). Simple English.",
-        "code": "Coding assistant. Provide clean code snippets in English.",
-        "readme": "Documentation expert. Write a professional GitHub README.md in English."
-    }
-    
-    # إصلاح مشكلة الموديل عبر استخدام التسمية المباشرة
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    
-    system_instruction = f"Instruction: {configs.get(persona)}. ALWAYS respond in English only."
-    
-    try:
-        response = model.generate_content(f"{system_instruction}\n\nUser: {prompt}")
-        return response.text
-    except Exception as e:
-        return f"Error occurred: {str(e)}"
+    def banner(self):
+        os.system('clear' if os.name == 'posix' else 'cls')
+        banner_art = """
+        ██████  ██████   █████   ██████   ██████  ███    ██ 
+        ██   ██ ██   ██ ██   ██ ██       ██    ██ ████   ██ 
+        ██   ██ ██████  ███████ ██   ███ ██    ██ ██ ██  ██ 
+        ██   ██ ██   ██ ██   ██ ██    ██ ██    ██ ██  ██ ██ 
+        ██████  ██   ██ ██   ██  ██████   ██████  ██   ████ 
+        """
+        console.print(Text(banner_art, style="bold red"))
+        grid = Table.grid(expand=True)
+        grid.add_column(justify="left")
+        grid.add_column(justify="right")
+        grid.add_row(
+            "[bold yellow]⚡ REVOLUTIONARY WEB INTELLIGENCE[/bold yellow]",
+            "[bold cyan]v2.0 PRO EDITION[/bold cyan]"
+        )
+        console.print(Panel(grid, border_style="red"))
+        console.print(f"[bold white]Commander:[/bold white] [bold green]Monkey D Dragon[/bold green] | [bold white]GitHub:[/bold white] [blue]toolss0824828402[/blue]\n")
 
-def read_local_file(filepath):
-    if os.path.exists(filepath):
-        with open(filepath, 'r', encoding='utf-8') as f:
-            return f.read()
-    return None
+    def get_response(self, prompt, mode="expert"):
+        personas = {
+            "expert": "Senior Security & Software Architect. English only. Technical depth.",
+            "simple": "Explain like I'm 5. Analogies. Simple English.",
+            "code": "Pure Code Mode. Documentation in English. Optimized logic.",
+            "audit": "Security Auditor. Find vulnerabilities in the provided code."
+        }
+        
+        full_prompt = f"System: {personas.get(mode)}\nUser: {prompt}"
+        
+        try:
+            chat = self.model.start_chat(history=self.history)
+            response = chat.send_message(full_prompt)
+            # تحديث الذاكرة
+            self.history.append({"role": "user", "parts": [prompt]})
+            self.history.append({"role": "model", "parts": [response.text]})
+            return response.text
+        except Exception as e:
+            return f"[bold red]Critical Error:[/bold red] {str(e)}"
 
-def save_output(content, prefix="search"):
-    if not os.path.exists("outputs"):
-        os.makedirs("outputs")
-    filename = f"outputs/{prefix}_{int(time.time())}.md"
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(content)
-    return filename
+    def save_work(self, content, ext="md"):
+        filename = f"{self.output_dir}/dragon_{int(time.time())}.{ext}"
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(content)
+        return filename
 
-def main():
-    banner()
-    
-    console.print("\n[bold white]Choose Mode:[/bold white]")
-    console.print("1. [red]Expert Search[/red] | 2. [green]Simple Explain[/green] | 3. [blue]Code Assistant[/blue]")
-    console.print("4. [magenta]Analyze Local File[/magenta] | 5. [yellow]Generate README[/yellow]")
-    
-    mode = input("\nSelect (1-5): ")
-    
-    persona_map = {"1": "expert", "2": "simple", "3": "code", "5": "readme"}
-    
-    if mode == "4":
-        path = input("[?] Enter file path (e.g., dragon.py): ")
-        file_content = read_local_file(path)
-        if file_content:
-            query = f"Analyze this code for errors and explain it:\n\n{file_content}"
-            selected_persona = "expert"
-        else:
-            console.print("[red]File not found![/red]")
-            return
-    elif mode in persona_map:
-        selected_persona = persona_map[mode]
-        query = input(f"\n[?] Enter your prompt (English): ")
-    else:
-        return
+    def analyze_file(self):
+        path = console.input("[bold yellow]📂 Drag file here or enter path: [/bold yellow]")
+        if os.path.exists(path):
+            with open(path, 'r') as f:
+                content = f.read()
+            return content, path
+        return None, None
 
-    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), transient=True) as progress:
-        progress.add_task(description="Dragon is processing...", total=None)
-        answer = get_ai_response(query, selected_persona)
+    def menu(self):
+        self.banner()
+        table = Table(show_header=False, border_style="dim")
+        table.add_row("[1] 🧠 AI Expert Search", "[2] 📝 Code Audit (Local File)")
+        table.add_row("[3] 📄 README Architect", "[4] 🛠 Fast Code Generator")
+        table.add_row("[5] 📜 View History", "[6] ❌ Terminate Session")
+        console.print(table)
+        
+        return input("\n[?] Command > ")
 
-    console.print("\n")
-    console.print(Panel(answer, title="[bold green]DRAGON AI RESPONSE[/bold green]", border_style="red"))
-    
-    # الحفظ التلقائي
-    save_type = "readme" if mode == "5" else "log"
-    saved_path = save_output(answer, prefix=save_type)
-    console.print(f"\n[dim]✔ File saved to: {saved_path}[/dim]")
+    def run(self):
+        while True:
+            cmd = self.menu()
+            
+            if cmd == "6": break
+            
+            prompt = ""
+            mode = "expert"
+            
+            if cmd == "1":
+                prompt = console.input("[bold cyan]Prompt (English): [/bold cyan]")
+            elif cmd == "2":
+                content, path = self.analyze_file()
+                if content:
+                    prompt = f"Audit this file for bugs/vulnerabilities: \n{content}"
+                    mode = "audit"
+                else: continue
+            elif cmd == "3":
+                desc = console.input("[bold cyan]Project Description: [/bold cyan]")
+                prompt = f"Create a professional GitHub README.md for: {desc}"
+            elif cmd == "4":
+                prompt = console.input("[bold cyan]What code do you need?: [/bold cyan]")
+                mode = "code"
+            
+            with Progress(SpinnerColumn(spinner_name="dots12"), TextColumn("[progress.description]{task.description}"), transient=True) as progress:
+                progress.add_task(description="[bold red]Dragon is accessing database...[/bold red]", total=None)
+                response = self.get_response(prompt, mode)
+
+            # عرض النتيجة بـ Markdown احترافي
+            console.print(Panel(Markdown(response), title="[bold green]DRAGON INTELLIGENCE[/bold green]", border_style="blue"))
+            
+            saved_file = self.save_work(response)
+            console.print(f"[dim]✔ Knowledge saved to: {saved_file}[/dim]")
+            input("\n[Press Enter to continue...]")
 
 if __name__ == "__main__":
-    main()
+    app = DragonAI()
+    app.run()
