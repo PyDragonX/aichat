@@ -4,12 +4,11 @@ import google.generativeai as genai
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.syntax import Syntax
 
 # إعدادات الواجهة
 console = Console()
 
-# إعداد مفتاح API - استبدل 'YOUR_API_KEY' بمفتاحك الخاص
+# إعداد مفتاح API
 genai.configure(api_key="AIzaSyC3Nyp_aH0DfQAoYqCdbvA5mhBVlTt1wNs")
 
 def banner():
@@ -70,18 +69,19 @@ def main():
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         transient=True,
-    ) as progress:2
+    ) as progress:
         progress.add_task(description="AI is thinking...", total=None)
         answer = get_ai_response(query, selected_persona)
     
     # عرض الإجابة بتنسيق ملون (Rich Text)
+    console.print("\n")
     console.print(Panel(answer, title="[bold green]AI Response (English)[/bold green]", border_style="blue"))
     
     # حفظ السجل تلقائياً
     log_file = save_log(query, answer)
     console.print(f"\n[dim white]✔ Response saved to: {log_file}[/dim white]")
     
-    # خيار النسخ السريع (يعتمد على البيئة، هنا كمثال نصي)
+    # خيار النسخ السريع
     console.print("[bold yellow]Tip: Long press to copy text in Termux![/bold yellow]")
 
 if __name__ == "__main__":
