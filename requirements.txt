@@ -1,3 +1,4 @@
-google-generativeai
+groq
 rich
-pyfiglet
+psutil
+requests
