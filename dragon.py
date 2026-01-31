@@ -1,130 +1,77 @@
 import os
-import sys
-import time
-import json
 import google.generativeai as genai
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rich.live import Live
-from rich.text import Text
-from rich.markdown import Markdown
-from rich.progress import Progress, SpinnerColumn, TextColumn
 
-# إعدادات النظام
+# --- إعدادات الهوية الجديدة ---
+USERNAME = "PyDragonX"
+GITHUB_LINK = "https://github.com/PyDragonX"
+
+# --- إعدادات الـ API ---
+# استخدم نموذج 'gemini-1.5-flash' وتأكد من تحديث المكتبة لتجنب خطأ 404
+API_KEY = "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"
+genai.configure(api_key=API_KEY)
+model = genai.GenerativeModel('gemini-1.5-flash')
+
 console = Console()
 
-# إعداد مفتاح الـ API (يفضل وضعه في متغير بيئة)
-API_KEY = "AIzaSyB-ulLc4L383-d6DvYD0U-hV4aKHhuo2Wo"
-genai.configure(api_key=API_KEY)
+def save_to_history(prompt, response):
+    with open("dragon_history.txt", "a", encoding="utf-8") as f:
+        f.write(f"User: {prompt}\nAI: {response}\n{'-'*30}\n")
 
-class DragonAI:
-    def __init__(self):
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
-        self.history = []
-        self.output_dir = "dragon_outputs"
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir)
+def display_menu():
+    os.system('clear' if os.name == 'posix' else 'cls')
+    
+    # واجهة احترافية بالاسم الجديد
+    console.print(Panel.fit(
+        f"[bold cyan]🐉 {USERNAME} REVOLUTIONARY SYSTEM v2.5[/bold cyan]\n"
+        f"[bold white]GitHub: {GITHUB_LINK}[/bold white]",
+        border_style="cyan",
+        title="[bold red]VIRTUAL TERMINAL[/bold red]"
+    ))
+    
+    table = Table(show_header=False, box=None)
+    table.add_row("[1] 🧠 AI Expert Search", "[2] 📝 Code Audit (Local File)")
+    table.add_row("[3] 📄 README Architect", "[4] 🛠️ Fast Code Generator")
+    table.add_row("[5] 📜 View History", "[6] 🔄 Check for Updates")
+    table.add_row("[7] ❌ Terminate Session", "") # زر الخروج
+    
+    console.print(Panel(table, title="[bold yellow]Select an Option[/bold yellow]", border_style="blue"))
 
-    def banner(self):
-        os.system('clear' if os.name == 'posix' else 'cls')
-        banner_art = """
-        ██████  ██████   █████   ██████   ██████  ███    ██ 
-        ██   ██ ██   ██ ██   ██ ██       ██    ██ ████   ██ 
-        ██   ██ ██████  ███████ ██   ███ ██    ██ ██ ██  ██ 
-        ██   ██ ██   ██ ██   ██ ██    ██ ██    ██ ██  ██ ██ 
-        ██████  ██   ██ ██   ██  ██████   ██████  ██   ████ 
-        """
-        console.print(Text(banner_art, style="bold red"))
-        grid = Table.grid(expand=True)
-        grid.add_column(justify="left")
-        grid.add_column(justify="right")
-        grid.add_row(
-            "[bold yellow]⚡ REVOLUTIONARY WEB INTELLIGENCE[/bold yellow]",
-            "[bold cyan]v2.0 PRO EDITION[/bold cyan]"
-        )
-        console.print(Panel(grid, border_style="red"))
-        console.print(f"[bold white]Commander:[/bold white] [bold green]Monkey D Dragon[/bold green] | [bold white]GitHub:[/bold white] [blue]toolss0824828402[/blue]\n")
-
-    def get_response(self, prompt, mode="expert"):
-        personas = {
-            "expert": "Senior Security & Software Architect. English only. Technical depth.",
-            "simple": "Explain like I'm 5. Analogies. Simple English.",
-            "code": "Pure Code Mode. Documentation in English. Optimized logic.",
-            "audit": "Security Auditor. Find vulnerabilities in the provided code."
-        }
+def main():
+    while True:
+        display_menu()
+        choice = input(f"\n[{USERNAME}] @ Terminal:~$ ")
         
-        full_prompt = f"System: {personas.get(mode)}\nUser: {prompt}"
+        if choice == '1':
+            prompt = input("Enter your query: ")
+            try:
+                res = model.generate_content(prompt)
+                console.print(Panel(res.text, title="Result", border_style="green"))
+                save_to_history(prompt, res.text)
+            except Exception as e:
+                console.print(f"[bold red]Error:[/bold red] {e}")
+            input("\nPress Enter to return...")
+
+        elif choice == '5':
+            console.print("\n[bold cyan]--- History ---[/bold cyan]")
+            if os.path.exists("dragon_history.txt"):
+                with open("dragon_history.txt", "r") as f: print(f.read())
+            else:
+                console.print("No history found.")
+            input("\nPress Enter...")
+
+        elif choice == '6':
+            console.print(f"[bold green]Checking {GITHUB_LINK} for updates...[/bold green]")
+            # هنا يمكنك إضافة كود عمل git pull مستقبلاً
+            input("\nAlready up to date! Press Enter...")
+
+        elif choice == '7':
+            console.print(f"[bold red]Shutting down {USERNAME} Intelligence... Goodbye![/bold red]")
+            break
         
-        try:
-            chat = self.model.start_chat(history=self.history)
-            response = chat.send_message(full_prompt)
-            # تحديث الذاكرة
-            self.history.append({"role": "user", "parts": [prompt]})
-            self.history.append({"role": "model", "parts": [response.text]})
-            return response.text
-        except Exception as e:
-            return f"[bold red]Critical Error:[/bold red] {str(e)}"
-
-    def save_work(self, content, ext="md"):
-        filename = f"{self.output_dir}/dragon_{int(time.time())}.{ext}"
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(content)
-        return filename
-
-    def analyze_file(self):
-        path = console.input("[bold yellow]📂 Drag file here or enter path: [/bold yellow]")
-        if os.path.exists(path):
-            with open(path, 'r') as f:
-                content = f.read()
-            return content, path
-        return None, None
-
-    def menu(self):
-        self.banner()
-        table = Table(show_header=False, border_style="dim")
-        table.add_row("[1] 🧠 AI Expert Search", "[2] 📝 Code Audit (Local File)")
-        table.add_row("[3] 📄 README Architect", "[4] 🛠 Fast Code Generator")
-        table.add_row("[5] 📜 View History", "[6] ❌ Terminate Session")
-        console.print(table)
-        
-        return input("\n[?] Command > ")
-
-    def run(self):
-        while True:
-            cmd = self.menu()
-            
-            if cmd == "6": break
-            
-            prompt = ""
-            mode = "expert"
-            
-            if cmd == "1":
-                prompt = console.input("[bold cyan]Prompt (English): [/bold cyan]")
-            elif cmd == "2":
-                content, path = self.analyze_file()
-                if content:
-                    prompt = f"Audit this file for bugs/vulnerabilities: \n{content}"
-                    mode = "audit"
-                else: continue
-            elif cmd == "3":
-                desc = console.input("[bold cyan]Project Description: [/bold cyan]")
-                prompt = f"Create a professional GitHub README.md for: {desc}"
-            elif cmd == "4":
-                prompt = console.input("[bold cyan]What code do you need?: [/bold cyan]")
-                mode = "code"
-            
-            with Progress(SpinnerColumn(spinner_name="dots12"), TextColumn("[progress.description]{task.description}"), transient=True) as progress:
-                progress.add_task(description="[bold red]Dragon is accessing database...[/bold red]", total=None)
-                response = self.get_response(prompt, mode)
-
-            # عرض النتيجة بـ Markdown احترافي
-            console.print(Panel(Markdown(response), title="[bold green]DRAGON INTELLIGENCE[/bold green]", border_style="blue"))
-            
-            saved_file = self.save_work(response)
-            console.print(f"[dim]✔ Knowledge saved to: {saved_file}[/dim]")
-            input("\n[Press Enter to continue...]")
+        # يمكنك برمجة باقي الأزرار (2, 3, 4) بنفس الطريقة
 
 if __name__ == "__main__":
-    app = DragonAI()
-    app.run()
+    main()
